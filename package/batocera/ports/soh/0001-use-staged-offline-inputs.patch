@@ -1,0 +1,89 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 4429cc59..ca32c8be 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -57,6 +57,17 @@ execute_process(
+     OUTPUT_STRIP_TRAILING_WHITESPACE
+ )
+ 
++# Buildroot exports Git sources without their .git directory. Keep the pinned
++# source identity supplied by the package when no local checkout is available.
++string(LENGTH "${GIT_COMMIT_HASH}" GIT_COMMIT_HASH_LENGTH)
++if(NOT GIT_COMMIT_HASH_LENGTH EQUAL 40 OR NOT GIT_COMMIT_HASH MATCHES "^[0-9a-fA-F]+$")
++    string(LENGTH "${SOH_SOURCE_COMMIT}" SOH_SOURCE_COMMIT_LENGTH)
++    if(NOT SOH_SOURCE_COMMIT_LENGTH EQUAL 40 OR NOT SOH_SOURCE_COMMIT MATCHES "^[0-9a-fA-F]+$")
++        message(FATAL_ERROR "A full SOH_SOURCE_COMMIT is required outside a Git checkout")
++    endif()
++    set(GIT_COMMIT_HASH "${SOH_SOURCE_COMMIT}")
++endif()
++
+ # Get only the first 7 characters of the hash
+ string(SUBSTRING "${GIT_COMMIT_HASH}" 0 7 SHORT_COMMIT_HASH)
+ 
+diff --git a/soh/CMakeLists.txt b/soh/CMakeLists.txt
+index 31955ebf..51651c5c 100644
+--- a/soh/CMakeLists.txt
++++ b/soh/CMakeLists.txt
+@@ -724,7 +724,10 @@ INSTALL(FILES ${CMAKE_BINARY_DIR}/soh/soh.o2r DESTINATION . COMPONENT ship)
+ endif()
+ 
+ find_program(CURL NAMES curl DOC "Path to the curl program.  Used to download files.")
+-execute_process(COMMAND ${CURL} -sSfL https://raw.githubusercontent.com/mdqinc/SDL_GameControllerDB/master/gamecontrollerdb.txt -o ${CMAKE_BINARY_DIR}/gamecontrollerdb.txt OUTPUT_VARIABLE RESULT)
++if(NOT SOH_GAMECONTROLLERDB_FILE OR NOT EXISTS "${SOH_GAMECONTROLLERDB_FILE}")
++    message(FATAL_ERROR "SOH_GAMECONTROLLERDB_FILE must point to the staged controller database")
++endif()
++configure_file("${SOH_GAMECONTROLLERDB_FILE}" "${CMAKE_BINARY_DIR}/gamecontrollerdb.txt" COPYONLY)
+ 
+ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+ configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/macosx/Info.plist.in ${CMAKE_BINARY_DIR}/macosx/Info.plist @ONLY)
+diff --git a/libultraship/cmake/dependencies/common.cmake b/libultraship/cmake/dependencies/common.cmake
+index 8f5813a..f75b683 100644
+--- a/libultraship/cmake/dependencies/common.cmake
++++ b/libultraship/cmake/dependencies/common.cmake
+@@ -52,7 +52,11 @@ endif()
+ 
+ #=================== STB ===================
+ set(STB_DIR ${CMAKE_BINARY_DIR}/_deps/stb)
+-file(DOWNLOAD "https://github.com/nothings/stb/raw/0bc88af4de5fb022db643c2d8e549a0927749354/stb_image.h" "${STB_DIR}/stb_image.h")
++if(NOT SOH_STB_IMAGE_FILE OR NOT EXISTS "${SOH_STB_IMAGE_FILE}")
++    message(FATAL_ERROR "SOH_STB_IMAGE_FILE must point to the staged stb_image.h")
++endif()
++file(MAKE_DIRECTORY "${STB_DIR}")
++configure_file("${SOH_STB_IMAGE_FILE}" "${STB_DIR}/stb_image.h" COPYONLY)
+ file(WRITE "${STB_DIR}/stb_impl.c" "#define STB_IMAGE_IMPLEMENTATION\n#include \"stb_image.h\"")
+ 
+ add_library(stb STATIC)
+@@ -110,4 +114,4 @@ FetchContent_Declare(
+     GIT_REPOSITORY https://github.com/KiritoDv/prism-processor.git
+     GIT_TAG bbcbc7e3f890a5806b579361e7aa0336acd547e7
+ )
+-FetchContent_MakeAvailable(prism)
+\ No newline at end of file
++FetchContent_MakeAvailable(prism)
+
+diff --git a/libultraship/cmake/dependencies/linux.cmake b/libultraship/cmake/dependencies/linux.cmake
+--- a/libultraship/cmake/dependencies/linux.cmake
++++ b/libultraship/cmake/dependencies/linux.cmake
+@@ -4,5 +4,7 @@ if (USE_OPENGLES)
+     target_link_libraries(ImGui PUBLIC ${OPENGL_GLESv2_LIBRARY})
+     add_compile_definitions(IMGUI_IMPL_OPENGL_ES3)
+ else()
+-    target_link_libraries(ImGui PUBLIC ${OPENGL_opengl_LIBRARY})
++    if (NOT SOH_ASSET_GENERATOR_ONLY)
++        target_link_libraries(ImGui PUBLIC ${OPENGL_opengl_LIBRARY})
++    endif()
+ endif()
+
+diff --git a/libultraship/src/fast/backends/gfx_sdl2.cpp b/libultraship/src/fast/backends/gfx_sdl2.cpp
+--- a/libultraship/src/fast/backends/gfx_sdl2.cpp
++++ b/libultraship/src/fast/backends/gfx_sdl2.cpp
+@@ -26,7 +26,9 @@
+ #else
+ #include <SDL2/SDL.h>
+ #define GL_GLEXT_PROTOTYPES 1
++#if defined(USE_OPENGLES)
+ #include <SDL2/SDL_opengles2.h>
++#endif
+ #endif
+ 
+ #include "ship/window/gui/Gui.h"

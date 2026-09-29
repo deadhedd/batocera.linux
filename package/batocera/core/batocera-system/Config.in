@@ -1425,6 +1425,9 @@ config BR2_PACKAGE_BATOCERA_PORTS_SYSTEMS
 	# OpenGOAL (Jak and Daxter trilogy)
 	select BR2_PACKAGE_OPENGOAL    if BR2_x86_64
 
+	# Ship of Harkinian
+	select BR2_PACKAGE_SOH    if BR2_x86_64
+
 	help
 	  Ports
 

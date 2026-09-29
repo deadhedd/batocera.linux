@@ -4882,3 +4882,9 @@ opengoal:
           Trouvez la documentation ici: https://wiki.batocera.org/systems:opengoal
   comment_br: |
           Para mais informações: https://wiki.batocera.org/systems:opengoal
+
+soh:
+  name: Ship of Harkinian
+  hardware: port
+  platform: pc
+  group: ports

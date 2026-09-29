@@ -1,0 +1,24 @@
+config BR2_PACKAGE_SOH
+	bool "Ship of Harkinian"
+	depends on BR2_x86_64
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on BR2_PACKAGE_HAS_LIBGL
+	select BR2_PACKAGE_SDL2
+	select BR2_PACKAGE_LIBPNG
+	select BR2_PACKAGE_LIBOGG
+	select BR2_PACKAGE_LIBVORBIS
+	select BR2_PACKAGE_OPUS
+	select BR2_PACKAGE_OPUSFILE
+	select BR2_PACKAGE_LIBZIP
+	select BR2_PACKAGE_JSON_FOR_MODERN_CPP
+	select BR2_PACKAGE_TINYXML2
+	select BR2_PACKAGE_SPDLOG
+	help
+	  Ship of Harkinian is a native PC port of Ocarina of Time.
+	  You must provide a supported ROM. The first launch extracts it
+	  into the writable SoH save directory.
+
+	  https://github.com/HarbourMasters/Shipwright
+
+comment "Ship of Harkinian needs x86_64, a C++ toolchain, and OpenGL"
+	depends on !BR2_x86_64 || !BR2_INSTALL_LIBSTDCPP || !BR2_PACKAGE_HAS_LIBGL

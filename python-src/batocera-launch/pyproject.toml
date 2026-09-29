@@ -19,6 +19,7 @@ batocera-joysticks-hotkeys = "batocera_launch.joysticks_hotkeys:main"
 [project.entry-points."batocera_launch.emulators"]
 lexaloffle = 'batocera_launch.emulators.lexaloffle:Lexaloffle'
 sh = 'batocera_launch.emulators.sh:Sh'
+soh = 'batocera_launch.emulators.soh:Soh'
 
 abuse = 'batocera_launch.emulators.abuse:Abuse'
 amiberry = 'batocera_launch.emulators.amiberry:Amiberry'

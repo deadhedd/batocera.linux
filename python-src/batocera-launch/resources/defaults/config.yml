@@ -510,6 +510,9 @@ openbor:
 opengoal:
   emulator: opengoal
   core:     opengoal
+soh:
+  emulator: soh
+  core:     soh
 openjazz:
   emulator: openjazz
   core:     openjazz
