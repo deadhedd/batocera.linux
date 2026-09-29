@@ -126,13 +126,19 @@ define HOST_SOH_INSTALL_CMDS
 endef
 
 define SOH_INSTALL_TARGET_CMDS
+	if [ -d $(TARGET_DIR)/usr/lib/soh ]; then \
+		chmod -R u+w $(TARGET_DIR)/usr/lib/soh; \
+		rm -rf $(TARGET_DIR)/usr/lib/soh; \
+	fi
 	test -s $(HOST_DIR)/share/soh/$(SOH_PROJECT_VERSION)/soh.o2r
-	$(INSTALL) -D -m 0755 $(SOH_BUILDDIR)/soh/soh $(TARGET_DIR)/usr/lib/soh/soh.elf
+	$(INSTALL) -D -m 0755 $(SOH_BUILDDIR)/soh/soh.elf $(TARGET_DIR)/usr/lib/soh/soh.elf
 	$(INSTALL) -m 0644 $(HOST_DIR)/share/soh/$(SOH_PROJECT_VERSION)/soh.o2r \
 		$(TARGET_DIR)/usr/lib/soh/soh.o2r
 	$(INSTALL) -m 0644 $(SOH_DL_DIR)/gamecontrollerdb.txt \
 		$(TARGET_DIR)/usr/lib/soh/gamecontrollerdb.txt
+	mkdir -p $(TARGET_DIR)/usr/lib/soh/assets
 	cp -a $(SOH_DIR)/soh/assets/extractor $(TARGET_DIR)/usr/lib/soh/assets
+	cp -a $(SOH_DIR)/soh/assets/extractor/. $(TARGET_DIR)/usr/lib/soh/assets
 	cp -a $(SOH_DIR)/soh/assets/xml $(TARGET_DIR)/usr/lib/soh/assets/xml
 	chmod -R a-w $(TARGET_DIR)/usr/lib/soh
 endef

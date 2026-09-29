@@ -2,7 +2,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 index 4429cc59..ca32c8be 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -57,6 +57,17 @@ execute_process(
+@@ -57,5 +57,16 @@ execute_process(
      OUTPUT_STRIP_TRAILING_WHITESPACE
  )
  
@@ -19,6 +19,25 @@ index 4429cc59..ca32c8be 100644
 +
  # Get only the first 7 characters of the hash
  string(SUBSTRING "${GIT_COMMIT_HASH}" 0 7 SHORT_COMMIT_HASH)
+
+diff --git a/CMake/Utils.cmake b/CMake/Utils.cmake
+--- a/CMake/Utils.cmake
++++ b/CMake/Utils.cmake
+@@ -235,5 +235,14 @@ function(get_linux_lsb_release_information)
+     find_program(LSB_RELEASE_EXEC lsb_release)
+     if(NOT LSB_RELEASE_EXEC)
+-        message(FATAL_ERROR "Could not detect lsb_release executable, can not gather required information")
++        # Distro labels are only used in optional package metadata. Build
++        # environments do not always provide lsb_release, so keep configure
++        # usable without making that host utility a build dependency.
++        set(LSB_RELEASE_ID_SHORT "Linux")
++        set(LSB_RELEASE_VERSION_SHORT "unknown")
++        set(LSB_RELEASE_CODENAME_SHORT "unknown")
++        set(LSB_RELEASE_ID_SHORT "${LSB_RELEASE_ID_SHORT}" PARENT_SCOPE)
++        set(LSB_RELEASE_VERSION_SHORT "${LSB_RELEASE_VERSION_SHORT}" PARENT_SCOPE)
++        set(LSB_RELEASE_CODENAME_SHORT "${LSB_RELEASE_CODENAME_SHORT}" PARENT_SCOPE)
++        return()
+     endif()
  
 diff --git a/soh/CMakeLists.txt b/soh/CMakeLists.txt
 index 31955ebf..51651c5c 100644
@@ -64,6 +83,24 @@ index 8f5813a..f75b683 100644
 diff --git a/libultraship/cmake/dependencies/linux.cmake b/libultraship/cmake/dependencies/linux.cmake
 --- a/libultraship/cmake/dependencies/linux.cmake
 +++ b/libultraship/cmake/dependencies/linux.cmake
+@@ -1,3 +1,16 @@
+ #=================== ImGui ===================
+ find_package(SDL2 REQUIRED)
++# SDL2's generated config can point at the build host's /usr/lib when
++# cross-compiling. Recover the imported target from the cross sysroot.
++if (NOT TARGET SDL2::SDL2)
++    find_library(SOH_SDL2_LIBRARY NAMES SDL2)
++    if (NOT SOH_SDL2_LIBRARY)
++        message(FATAL_ERROR "Could not resolve SDL2::SDL2 in the target sysroot")
++    endif()
++    add_library(SDL2::SDL2 UNKNOWN IMPORTED GLOBAL)
++    set_target_properties(SDL2::SDL2 PROPERTIES
++        IMPORTED_LOCATION "${SOH_SDL2_LIBRARY}"
++        INTERFACE_INCLUDE_DIRECTORIES "${SDL2_INCLUDE_DIRS}"
++    )
++endif()
+ target_link_libraries(ImGui PUBLIC SDL2::SDL2)
+
 @@ -4,5 +4,7 @@ if (USE_OPENGLES)
      target_link_libraries(ImGui PUBLIC ${OPENGL_GLESv2_LIBRARY})
      add_compile_definitions(IMGUI_IMPL_OPENGL_ES3)

@@ -18,10 +18,11 @@ Add Ship of Harkinian 9.2.3 as an x86_64 Batocera port, with a pinned offline bu
 **Done when:** the x86_64 image contains the matching read only runtime, EmulationStation accepts `.z64`, `.v64`, and `.n64` ROMs, first launch extracts into `SHIP_HOME`, later launches reuse the archive, and controller input plus the Batocera exit hotkey work.
 - [x] Design it (spec): `/architect Ship of Harkinian integration`
 - [ ] Build it: `/develop Ship of Harkinian integration`
-   - [ ] Pin and stage every source input, then prove configure and compile work offline (AC-1, AC-9)
-   - [ ] Generate matching `soh.o2r` with host tools and install the target runtime tree (AC-1, AC-2, AC-3, AC-10)
-   - [ ] Register x86_64 package selection and the EmulationStation system (AC-1, AC-4)
-   - [ ] Implement the first extraction and archive reuse launcher paths with SDL mapping and exit binding (AC-5, AC-6, AC-7, AC-8)
+   - [x] Pin and stage source inputs; both CMake variants use staged sources and disconnected FetchContent (AC-1, partial AC-9)
+   - [ ] Prove configure and compile with network access blocked (AC-9)
+   - [x] Build host `GenerateSohOtr` and cross-built target `soh`; verify matching archive and read only package-stage runtime tree with no `ZAPD.out` (AC-1, AC-2, package portion of AC-3 and AC-10)
+   - [x] Register x86_64 package selection and EmulationStation metadata (AC-1, AC-4; final image visibility remains untested)
+   - [x] Implement first extraction and archive reuse paths with SDL mapping and exit binding (AC-5, AC-6, AC-7, AC-8; runtime behavior remains untested)
    - [ ] Prove extraction, later launch, controller, and exit behavior in the x86_64 runtime (AC-1 through AC-10)
 - [ ] Verify it: `/check verify Ship of Harkinian integration`
 - [ ] Test it: `/test Ship of Harkinian integration`

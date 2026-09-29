@@ -1,7 +1,7 @@
 # 0001. Ship of Harkinian on Batocera
 
 **Date**: 2026-09-27
-**Status**: In Progress
+**Status**: In Progress — the narrow x86_64 package build and package staging pass; final-image, network-isolated, and runtime verification remain.
 
 ## Summary
 
@@ -56,7 +56,7 @@ Use one Shipwright commit and one submodule closure for both Buildroot package v
 * libultraship at the recorded submodule commit, including `src/fast/shaders` and code needed by ZAPD.
 * Buildroot host Python and the native libraries required by the host CMake graph.
 
-`soh/assets/extractor` and `soh/assets/xml` are required at runtime for ROM extraction. They are not inputs to `GenerateSohOtr --norom`. Install the host output at `$(HOST_DIR)/share/soh/$(SOH_VERSION)/soh.o2r`. The target package must verify that exact file exists and copy it into the final runtime tree. The shared commit, the project version passed to OTRExporter, and the versioned output path prevent stale host output from being paired with a different target build.
+`soh/assets/extractor` and `soh/assets/xml` are required at runtime for ROM extraction. They are not inputs to `GenerateSohOtr --norom`. Shipwright's target post-build step also places the extractor files directly under `assets`, so the package retains those flat runtime entries and the source `extractor` subtree. Install the host output at `$(HOST_DIR)/share/soh/$(SOH_PROJECT_VERSION)/soh.o2r`. The target package must verify that exact file exists and copy it into the final runtime tree. The shared commit, the project version passed to OTRExporter, and the versioned output path prevent stale host output from being paired with a different target build.
 
 **Installed filesystem layout**:
 
@@ -139,6 +139,14 @@ The requested tracer bullet starts with the highest risk seam, then joins it to 
 4. Add the launcher entry point, defaults, and SoH emulator class. Implement the archive check, argv behavior, fixed `SHIP_HOME`, SDL mapping, and exit context. Add focused launch tests. This satisfies **AC-5**, **AC-6**, **AC-7**, and **AC-8**.
 5. Build an x86_64 image with network blocked after source downloads. From EmulationStation, extract a ROM with `/usr/lib/soh` read only, confirm the generated archive under `SHIP_HOME`, relaunch without a ROM argument, test controller input, and confirm the exit hotkey exits gracefully. This satisfies **AC-1** through **AC-10**.
 
+## Package-stage evidence
+
+On 2026-09-29, `make x86_64-pkg PKG=soh` completed successfully. The target CMake cache selects Buildroot's `x86_64-buildroot-linux-gnu` toolchain, and the linked `soh.elf` is an ELF64 x86-64 executable. The host CMake cache selects native `/usr/bin/gcc` and `/usr/bin/g++` with `SOH_ASSET_GENERATOR_ONLY=ON`.
+
+The host-generated archive, its versioned host install, and the target package-stage copy have the same SHA-256: `f68801a944a25116c4ec04a4e46466064df52845b8c8ab02d5d276f5e408de72`. The target build log contains `Built target ZAPDLib` and `Built target soh`; no target `ZAPD` executable was produced or run. The package-stage `/usr/lib/soh` tree includes `soh.elf`, `soh.o2r`, `gamecontrollerdb.txt`, `assets/extractor`, and `assets/xml`; the files and directories have no write bits, and no `ZAPD.out` is installed.
+
+Both CMake variants set `FETCHCONTENT_FULLY_DISCONNECTED=ON` and point at the six staged FetchContent sources. STB and the controller database are staged Buildroot downloads, and the direct CMake download sites use those staged files. This build did not run in a network-isolated container, so **AC-9 remains unproven**. The package-only build also does not prove final image contents or runtime behavior; first extraction, repeat launch, controller input, graceful exit, and the read-only runtime write boundary remain for integration testing.
+
 ## Consequences
 
 **Positive**:
@@ -160,9 +168,9 @@ The requested tracer bullet starts with the highest risk seam, then joins it to 
 
 ## Follow-up
 
-* [ ] Prove that the host CMake graph can build `GenerateSohOtr` with Buildroot host dependencies. If the selected architecture cannot be proven, stop and revisit the host/target split through an architecture decision before changing it.
-* [ ] Prove that building only target `soh` does not build or run target `ZAPD`.
-* [ ] Confirm the archive readiness rule for multiple accepted ROM files. The first slice assumes either generated archive is sufficient for the one shared SoH home.
+* [x] Prove that the host CMake graph can build `GenerateSohOtr` with Buildroot host dependencies. The host-native CMake cache and matching installed archive prove this on x86_64.
+* [x] Prove that building only target `soh` does not build or run target `ZAPD`. The narrow build produced `ZAPDLib` and `soh`, with no target `ZAPD` executable.
+* [x] Confirm the archive readiness rule for multiple accepted ROM files: either generated archive is sufficient for the shared SoH home. Runtime launch behavior remains untested.
 * [ ] Verify the exact graceful exit action in the SoH runtime and record the `hotkeygen_context` binding that triggers it.
 * [ ] Verify the selected SDL_GameControllerDB snapshot works with the shipped SDL controller setup.
 
