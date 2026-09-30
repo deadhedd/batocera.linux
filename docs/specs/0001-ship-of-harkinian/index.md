@@ -141,6 +141,8 @@ The requested tracer bullet starts with the highest risk seam, then joins it to 
 
 ## Package-stage evidence
 
+This integration depends on the companion Buildroot fork at `https://github.com/deadhedd/buildroot.git`, pinned here at `6b9418e58315601c880c0d3392435b2b50933949`. That commit includes the SDL2 CMake-prefix correction required by this integration. Before merge readiness, the companion Buildroot changes must still be reconciled with canonical Buildroot.
+
 On 2026-09-29, `make x86_64-pkg PKG=soh` completed successfully. The target CMake cache selects Buildroot's `x86_64-buildroot-linux-gnu` toolchain, and the linked `soh.elf` is an ELF64 x86-64 executable. The host CMake cache selects native `/usr/bin/gcc` and `/usr/bin/g++` with `SOH_ASSET_GENERATOR_ONLY=ON`.
 
 The host-generated archive, its versioned host install, and the target package-stage copy have the same SHA-256: `f68801a944a25116c4ec04a4e46466064df52845b8c8ab02d5d276f5e408de72`. The target build log contains `Built target ZAPDLib` and `Built target soh`; no target `ZAPD` executable was produced or run. The package-stage `/usr/lib/soh` tree includes `soh.elf`, `soh.o2r`, `gamecontrollerdb.txt`, `assets/extractor`, and `assets/xml`; the files and directories have no write bits, and no `ZAPD.out` is installed.
