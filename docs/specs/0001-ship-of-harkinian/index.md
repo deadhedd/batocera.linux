@@ -1,7 +1,7 @@
 # 0001. Ship of Harkinian on Batocera
 
 **Date**: 2026-09-27
-**Status**: In Progress — the narrow x86_64 package build and package staging pass; final-image, network-isolated, and runtime verification remain.
+**Status**: In Progress — the narrow x86_64 package build and offline configure/compile proof pass; the full-image build is blocked by missing Kodi 21 language archives, so final-image and runtime verification remain.
 
 ## Summary
 
@@ -137,7 +137,7 @@ The requested tracer bullet starts with the highest risk seam, then joins it to 
 2. Add the host and target package variants. Build `GenerateSohOtr` with the host toolchain, build only target `soh` with the cross toolchain, then install the matching `soh.o2r` and full relative runtime tree. Verify version matching and absence of a target ZAPD execution or installed `ZAPD.out`. This satisfies **AC-1**, **AC-2**, and **AC-3**.
 3. Register package selection, the emulator metadata, and the EmulationStation system with the three lowercase ROM extensions. Verify the package is selected only for x86_64 and the system is visible. This satisfies **AC-1** and **AC-4**.
 4. Add the launcher entry point, defaults, and SoH emulator class. Implement the archive check, argv behavior, fixed `SHIP_HOME`, SDL mapping, and exit context. Add focused launch tests. This satisfies **AC-5**, **AC-6**, **AC-7**, and **AC-8**.
-5. Build an x86_64 image with network blocked after source downloads. From EmulationStation, extract a ROM with `/usr/lib/soh` read only, confirm the generated archive under `SHIP_HOME`, relaunch without a ROM argument, test controller input, and confirm the exit hotkey exits gracefully. This satisfies **AC-1** through **AC-10**.
+5. After the isolated package proof passes, build a normal x86_64 image. Inspect its packaged SoH runtime and EmulationStation metadata, then use EmulationStation to extract a ROM with `/usr/lib/soh` read only, confirm the generated archive under `SHIP_HOME`, relaunch without a ROM argument, test controller input, and confirm the exit hotkey exits gracefully. This satisfies **AC-1** through **AC-10**.
 
 ## Package-stage evidence
 
@@ -145,9 +145,27 @@ This integration depends on the companion Buildroot fork at `https://github.com/
 
 On 2026-09-29, `make x86_64-pkg PKG=soh` completed successfully. The target CMake cache selects Buildroot's `x86_64-buildroot-linux-gnu` toolchain, and the linked `soh.elf` is an ELF64 x86-64 executable. The host CMake cache selects native `/usr/bin/gcc` and `/usr/bin/g++` with `SOH_ASSET_GENERATOR_ONLY=ON`.
 
-The host-generated archive, its versioned host install, and the target package-stage copy have the same SHA-256: `f68801a944a25116c4ec04a4e46466064df52845b8c8ab02d5d276f5e408de72`. The target build log contains `Built target ZAPDLib` and `Built target soh`; no target `ZAPD` executable was produced or run. The package-stage `/usr/lib/soh` tree includes `soh.elf`, `soh.o2r`, `gamecontrollerdb.txt`, `assets/extractor`, and `assets/xml`; the files and directories have no write bits, and no `ZAPD.out` is installed.
+The host-generated archive, its versioned host install, and the target package-stage copy have the same SHA-256: `b19d79165b71cca38dbabaf542791a1a9fc27d2eb54c7d650761da83c258dc1e`. The target build log contains `Built target ZAPDLib` and `Built target soh`; no target `ZAPD` executable was produced or run. The package-stage `/usr/lib/soh` tree includes `soh.elf`, `soh.o2r`, `gamecontrollerdb.txt`, `assets/extractor`, and `assets/xml`; the files and directories have no write bits, and no `ZAPD.out` is installed.
 
-Both CMake variants set `FETCHCONTENT_FULLY_DISCONNECTED=ON` and point at the six staged FetchContent sources. STB and the controller database are staged Buildroot downloads, and the direct CMake download sites use those staged files. This build did not run in a network-isolated container, so **AC-9 remains unproven**. The package-only build also does not prove final image contents or runtime behavior; first extraction, repeat launch, controller input, graceful exit, and the read-only runtime write boundary remain for integration testing.
+Both CMake variants set `FETCHCONTENT_FULLY_DISCONNECTED=ON` and point at the six staged FetchContent sources. STB and the controller database are staged Buildroot downloads, and the direct CMake download sites use those staged files.
+
+### Offline configure and compile proof (AC-9)
+
+On 2026-09-29, the host and target SoH CMake build directories were removed so configure and compile could not reuse their previous generated build trees. No other `output/x86_64` contents were removed. The extracted Shipwright sources, Buildroot download cache, dependency build directories, and shared ccache were preserved. The two package builds ran with `CCACHE_DISABLE=1`, so the compilers rebuilt their objects while leaving the shared ccache intact.
+
+The Batocera wrapper in `docker/docker.mk` inserts `DOCKER_OPTS` into its `docker run` invocation. The exact setting `DOCKER_OPTS=--network=none` gave the build container Docker's isolated `none` network namespace for the preflight, host configure/compile, and target configure/compile/link/install. In that same container immediately before both package targets, `/proc/net/dev` listed only `lo`, `/proc/net/route` had no routes, and `curl --silent --show-error --connect-timeout 2 --max-time 3 http://1.1.1.1/ --output /dev/null` failed with curl exit 7 (`Could not connect to server`). This tests actual connectivity in the namespace used by both builds; `FETCHCONTENT_FULLY_DISCONNECTED=ON` is only an additional CMake guard.
+
+The build command was:
+
+```sh
+make x86_64-shell CMD="bash -lc 'echo NETWORK_INTERFACES; cat /proc/net/dev; echo NETWORK_ROUTES; cat /proc/net/route; if curl --silent --show-error --connect-timeout 2 --max-time 3 http://1.1.1.1/ --output /dev/null; then echo NETWORK_CANARY_UNEXPECTED_SUCCESS; exit 1; else echo NETWORK_CANARY_BLOCKED; fi; export CCACHE_DISABLE=1; echo CCACHE_BYPASS_ENABLED; make -j8 O=/x86_64 BR2_EXTERNAL=/build BR2_DL_DIR=/build/buildroot/dl BR2_CCACHE_DIR=/home/batocera/.buildroot-ccache -C /build/buildroot host-soh-reconfigure; make -j8 O=/x86_64 BR2_EXTERNAL=/build BR2_DL_DIR=/build/buildroot/dl BR2_CCACHE_DIR=/home/batocera/.buildroot-ccache -C /build/buildroot soh-reconfigure'" DOCKER_OPTS=--network=none
+```
+
+The host CMake run selected `/usr/bin/gcc` and `/usr/bin/g++`, configured with `SOH_ASSET_GENERATOR_ONLY=ON`, compiled fresh objects, built `GenerateSohOtr`, generated `soh.o2r`, and installed the versioned host artifact. The target CMake run selected Buildroot's x86_64 toolchain, compiled fresh target objects, linked `soh.elf`, built target `soh`, and installed the package-stage runtime. The host-generated archive, its versioned host install, and the target package-stage copy have matching SHA-256 `b19d79165b71cca38dbabaf542791a1a9fc27d2eb54c7d650761da83c258dc1e`. The target package-stage tree remains read only and contains no `ZAPD.out`. Neither package target invokes CPack. These results prove **AC-9** and reconfirm the package-stage portions of **AC-2**, **AC-3**, and **AC-10**.
+
+### Full-image build attempt (2026-09-29)
+
+After AC-9 passed, `make x86_64-build` was run with the warm `output/x86_64` tree and normal local parallelism. The captured retry command was `set -o pipefail; make x86_64-build 2>&1 | tee /tmp/soh-x86_64-build.log`; it exited 2 during Buildroot's package download phase, before root-filesystem or image assembly. Several selected Kodi 21 language archives returned HTTP 404, including `de_de`, `es_es`, `it_it`, `pt_br`, and `sv_se`; for example, `https://sources.buildroot.net/kodi21-resource-language-pt_br/resource.language.pt_br-11.0.104.zip` returned `404 Not Found`. No final image was produced by this run or inspected. This unrelated image dependency failure blocks final-image inspection; first extraction, repeat launch, controller input, graceful exit, final-image metadata, and the runtime write boundary remain unverified.
 
 ## Consequences
 
@@ -173,6 +191,7 @@ Both CMake variants set `FETCHCONTENT_FULLY_DISCONNECTED=ON` and point at the si
 * [x] Prove that the host CMake graph can build `GenerateSohOtr` with Buildroot host dependencies. The host-native CMake cache and matching installed archive prove this on x86_64.
 * [x] Prove that building only target `soh` does not build or run target `ZAPD`. The narrow build produced `ZAPDLib` and `soh`, with no target `ZAPD` executable.
 * [x] Confirm the archive readiness rule for multiple accepted ROM files: either generated archive is sufficient for the shared SoH home. Runtime launch behavior remains untested.
+* [x] Prove AC-9 with host and target configure/compile running in the Docker wrapper's `--network=none` network namespace; the network canary failed, and fresh host/target builds completed with ccache bypassed.
 * [ ] Verify the exact graceful exit action in the SoH runtime and record the `hotkeygen_context` binding that triggers it.
 * [ ] Verify the selected SDL_GameControllerDB snapshot works with the shipped SDL controller setup.
 

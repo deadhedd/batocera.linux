@@ -19,7 +19,8 @@ Add Ship of Harkinian 9.2.3 as an x86_64 Batocera port, with a pinned offline bu
 - [x] Design it (spec): `/architect Ship of Harkinian integration`
 - [ ] Build it: `/develop Ship of Harkinian integration`
    - [x] Pin and stage source inputs; both CMake variants use staged sources and disconnected FetchContent (AC-1, partial AC-9)
-   - [ ] Prove configure and compile with network access blocked (AC-9)
+   - [x] Prove host and target configure/compile with network access blocked (AC-9; full-image attempt is blocked by Kodi 21 language archive 404s)
+   - [ ] Complete and inspect the full x86_64 image (Buildroot Kodi 21 language archives returned HTTP 404)
    - [x] Build host `GenerateSohOtr` and cross-built target `soh`; verify matching archive and read only package-stage runtime tree with no `ZAPD.out` (AC-1, AC-2, package portion of AC-3 and AC-10)
    - [x] Register x86_64 package selection and EmulationStation metadata (AC-1, AC-4; final image visibility remains untested)
    - [x] Implement first extraction and archive reuse paths with SDL mapping and exit binding (AC-5, AC-6, AC-7, AC-8; runtime behavior remains untested)
