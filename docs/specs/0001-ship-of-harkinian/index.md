@@ -1,7 +1,7 @@
 # 0001. Ship of Harkinian on Batocera
 
 **Date**: 2026-09-27
-**Status**: In Progress — the narrow x86_64 package build and offline configure/compile proof pass; the full-image build is blocked by missing Kodi 21 language archives, so final-image and runtime verification remain.
+**Status**: In Progress — the full x86_64 image build and final-filesystem inspection pass. AC-1 through AC-4 and the packaged-permissions portion of AC-10 are proven; AC-9 remains proven without repetition. The remaining acceptance work is interactive runtime verification of AC-5 through AC-8 and the write-boundary portion of AC-10.
 
 ## Summary
 
@@ -63,6 +63,7 @@ Use one Shipwright commit and one submodule closure for both Buildroot package v
 * Read only executable and assets: `/usr/lib/soh/soh.elf`, `/usr/lib/soh/soh.o2r`, `/usr/lib/soh/gamecontrollerdb.txt`, `/usr/lib/soh/assets/extractor`, and `/usr/lib/soh/assets/xml`. Preserve these upstream relative paths beside the executable because SoH locates runtime assets relative to itself.
 * Writable SoH state: `/userdata/saves/soh`, set through `SHIP_HOME`. Keep configuration, saves, generated `oot.o2r` and `oot-mq.o2r`, mods, logs, and other writable files together there.
 * Do not install `ZAPD.out` for normal runtime ROM extraction. SoH links target `ZAPDLib` and performs runtime extraction internally.
+* Apply final read only modes through `SOH_ROOTFS_PRE_CMD_HOOKS` under fakeroot. Keep the real Buildroot target tree owner-writable so temporary filesystem-tree cleanup can succeed.
 
 **Batocera integration surface**:
 
@@ -166,6 +167,46 @@ The host CMake run selected `/usr/bin/gcc` and `/usr/bin/g++`, configured with `
 ### Full-image build attempt (2026-09-29)
 
 After AC-9 passed, `make x86_64-build` was run with the warm `output/x86_64` tree and normal local parallelism. The captured retry command was `set -o pipefail; make x86_64-build 2>&1 | tee /tmp/soh-x86_64-build.log`; it exited 2 during Buildroot's package download phase, before root-filesystem or image assembly. Several selected Kodi 21 language archives returned HTTP 404, including `de_de`, `es_es`, `it_it`, `pt_br`, and `sv_se`; for example, `https://sources.buildroot.net/kodi21-resource-language-pt_br/resource.language.pt_br-11.0.104.zip` returned `404 Not Found`. No final image was produced by this run or inspected. This unrelated image dependency failure blocks final-image inspection; first extraction, repeat launch, controller input, graceful exit, final-image metadata, and the runtime write boundary remain unverified.
+
+### Full-image acceptance (2026-10-02)
+
+The warm full-image build completed successfully with the requested PTY capture:
+
+```sh
+script -q -e -c 'make x86_64-build' /tmp/soh-x86_64-build-final.log
+```
+
+The durable log starts at `2026-10-02 10:28:51-07:00` and ends at `10:51:45-07:00` with `COMMAND_EXIT_CODE="0"`; the tool also reports exit 0. Make completed normally. No output cleaning, targeted SoH rebuild, source changes, or repeat of AC-9 occurred in this acceptance pass. The earlier full-image blockers above are historical and no longer block this pass.
+
+The release artifacts are under `output/x86_64/images/batocera/images/x86_64/`:
+
+| Artifact | Bytes | Verification |
+|---|---:|---|
+| `batocera-x86_64-44-20261002.img.gz` | 4,600,329,078 | Decompressed successfully; GPT boot and userdata partitions inspected; embedded SquashFS matches the inspected root filesystem |
+| `boot.tar.xz` | 4,494,908,868 | Extracted `boot/batocera.update` payload matches the inspected root filesystem |
+| `batocera-x86_64-44-20261002.img.gz.md5` | 33 | Matches independently computed image MD5 |
+| `batocera-x86_64-44-20261002.img.gz.sha256` | 65 | Matches independently computed image SHA-256 |
+| `boot.tar.xz.md5` | 33 | Matches independently computed archive MD5 |
+| `boot.tar.xz.sha256` | 65 | Matches independently computed archive SHA-256 |
+| `batocera.version` | 35 | `44-dev-f1ae831d8c 2026/10/01 18:01` |
+
+The image SHA-256 is `25eef37c36677509ab90fd3c4f1000efd1eb727dd6d9b7b008bd6498471e85f7`; the boot archive SHA-256 is `1205289930109753413d344c5fa30bd544661db491aa087bf00ef0c47146c1fa`. Aggregate `MD5SUMS`, `SHA256SUMS`, and a version copy are in `output/x86_64/images/batocera/`. This development image intentionally produces no torrent.
+
+The filesystem outputs are `output/x86_64/images/rootfs.squashfs` (3,601,080,320 bytes) and `rufomaculata` (981,209,088 bytes). Supporting outputs include `bzImage`, `initrd`, `initrd.gz`, `uInitrd`, `batocera-boot.conf`, EFI/syslinux loaders, tools, and the assembled `batocera/boot_x86_64/` tree. `/tmp/soh-final-artifact-inventory.json` inventories all 188 files present under the images directory after this pass, including reused intermediates and staged boot files.
+
+The independently extracted SquashFS from the final disk image, the boot archive payload, the staged boot payload, and `rootfs.squashfs` all have SHA-256 `306a251cbd6f89aaa00b16917e6b213c0e4e97d8124db68c90169c5ae704bc0b`. This establishes that the inspected filesystem is the one shipped in both release artifacts.
+
+Final-filesystem inspection proves:
+
+* `/usr/lib/soh/soh.elf` is a stripped ELF64 x86-64 executable and is installed beside `soh.o2r` and `gamecontrollerdb.txt`.
+* The final-image `soh.o2r`, the versioned host install, and the previously verified host-generated archive share SHA-256 `b19d79165b71cca38dbabaf542791a1a9fc27d2eb54c7d650761da83c258dc1e` (**AC-2**).
+* `gamecontrollerdb.txt` matches the pinned SHA-256 `f857275fe139ddf724ede6500b7dc05af20cddb88eb1136a5a1218b33151c07c`. The extractor subtree contains 24 files and the XML subtree 7,680 files; both file-path sets exactly match the pinned package source. No `ZAPD.out` exists anywhere in the final filesystem (**AC-3**).
+* All 206 SoH directories have mode 0555, `soh.elf` has mode 0555, and all 7,730 data files have mode 0444. All 7,937 entries are root:root with zero write bits. The final permissions run through `SOH_ROOTFS_PRE_CMD_HOOKS` under fakeroot. The real TARGET_DIR remains owner-writable for all 7,937 SoH entries, and the temporary SquashFS target tree was removed successfully (**AC-3** and the packaged-permissions portion of **AC-10**).
+* `/usr/share/emulationstation/es_systems.cfg` contains exactly one `soh` system, named Ship of Harkinian, with `/userdata/roms/soh`, emulator `soh`, default core `soh`, and exactly `.n64 .v64 .z64`. `/usr/share/batocera/launch/defaults/config.yml` also selects emulator/core `soh`. The final image contains the launcher module, its `soh = batocera_launch.emulators.soh:Soh` entry point, and the ROM-directory initialization metadata (**AC-4**).
+
+These results complete **AC-1 through AC-4** using the earlier source/toolchain evidence plus final-image evidence. **AC-9** remains proven and was not repeated. They do not prove a booted EmulationStation session or SoH behavior. **AC-5 through AC-8**, and the runtime portion of **AC-10**, remain open: first extraction, reuse of either generated archive, controller behavior, graceful hotkey exit, and writable state staying under `SHIP_HOME=/userdata/saves/soh`. Remaining acceptance work is now purely interactive runtime testing. The separate companion-Buildroot reconciliation requirement above still applies before merge readiness.
+
+Detailed local evidence is in `/tmp/soh-acceptance-final-report.md`, `/tmp/soh-final-rootfs-checks.json`, `/tmp/soh-final-rootfs-metadata.txt`, `/tmp/soh-final-rootfs-all-metadata.txt`, `/tmp/soh-final-es_systems.cfg`, `/tmp/soh-final-launch-defaults.yml`, and `/tmp/soh-final-disk-partitions.json`, alongside the durable build log.
 
 ## Consequences
 

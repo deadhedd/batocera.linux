@@ -19,12 +19,12 @@ Add Ship of Harkinian 9.2.3 as an x86_64 Batocera port, with a pinned offline bu
 - [x] Design it (spec): `/architect Ship of Harkinian integration`
 - [ ] Build it: `/develop Ship of Harkinian integration`
    - [x] Pin and stage source inputs; both CMake variants use staged sources and disconnected FetchContent (AC-1, partial AC-9)
-   - [x] Prove host and target configure/compile with network access blocked (AC-9; full-image attempt is blocked by Kodi 21 language archive 404s)
-   - [ ] Complete and inspect the full x86_64 image (Buildroot Kodi 21 language archives returned HTTP 404)
-   - [x] Build host `GenerateSohOtr` and cross-built target `soh`; verify matching archive and read only package-stage runtime tree with no `ZAPD.out` (AC-1, AC-2, package portion of AC-3 and AC-10)
-   - [x] Register x86_64 package selection and EmulationStation metadata (AC-1, AC-4; final image visibility remains untested)
+   - [x] Prove host and target configure/compile with network access blocked (AC-9; preserved without repeating it)
+   - [x] Complete and inspect the full x86_64 image (2026-10-02: warm build exited 0; runtime assets, matching archive, read only permissions, and generated system metadata verified)
+   - [x] Build host `GenerateSohOtr` and cross-built target `soh`; verify matching archive, complete final-image runtime assets, read only image modes, and no `ZAPD.out` (AC-1, AC-2, AC-3, packaged-permissions portion of AC-10)
+   - [x] Register x86_64 package selection and EmulationStation metadata (AC-1, AC-4; final image registers emulator/default core `soh` and exactly `.n64 .v64 .z64`)
    - [x] Implement first extraction and archive reuse paths with SDL mapping and exit binding (AC-5, AC-6, AC-7, AC-8; runtime behavior remains untested)
-   - [ ] Prove extraction, later launch, controller, and exit behavior in the x86_64 runtime (AC-1 through AC-10)
+   - [ ] Prove first-launch extraction, archive reuse, controller input, hotkey exit, and SHIP_HOME/write-boundary behavior in the x86_64 runtime (AC-5 through AC-8 and the runtime portion of AC-10; remaining acceptance work is purely interactive)
 - [ ] Verify it: `/check verify Ship of Harkinian integration`
 - [ ] Test it: `/test Ship of Harkinian integration`
 Spec [0001](../specs/0001-ship-of-harkinian/index.md)
