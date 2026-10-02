@@ -4885,6 +4885,8 @@ opengoal:
 
 soh:
   name: Ship of Harkinian
+  manufacturer: Nintendo
+  release:
   hardware: port
   platform: pc
   group: ports
