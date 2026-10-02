@@ -140,8 +140,14 @@ define SOH_INSTALL_TARGET_CMDS
 	cp -a $(SOH_DIR)/soh/assets/extractor $(TARGET_DIR)/usr/lib/soh/assets
 	cp -a $(SOH_DIR)/soh/assets/extractor/. $(TARGET_DIR)/usr/lib/soh/assets
 	cp -a $(SOH_DIR)/soh/assets/xml $(TARGET_DIR)/usr/lib/soh/assets/xml
+endef
+
+# Apply image modes under fakeroot so the build tree stays owner-writable.
+# Batocera's writable root overlay still needs read-only SoH runtime modes.
+define SOH_SET_RUNTIME_PERMISSIONS
 	chmod -R a-w $(TARGET_DIR)/usr/lib/soh
 endef
+SOH_ROOTFS_PRE_CMD_HOOKS += SOH_SET_RUNTIME_PERMISSIONS
 
 $(eval $(cmake-package))
 $(eval $(host-cmake-package))
