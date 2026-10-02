@@ -13,16 +13,10 @@ IKEMEN_EMULATOR_INFO = ikemen.emulator.yml
 IKEMEN_SITE_METHOD = git
 IKEMEN_GIT_SUBMODULES = YES
 
-HOST_GO_COMMON_ENV = GOFLAGS=-mod=mod \
-		     GO111MODULE=on \
-		     GOROOT="$(HOST_GO_ROOT)" \
-		     GOPATH="$(HOST_GO_GOPATH)" \
-		     GOCACHE="$(HOST_GO_TARGET_CACHE)" \
-		     GOMODCACHE="$(@D)" \
-		     GOFLAGS="-modcacherw" \
-		     PATH=$(BR_PATH) \
-		     GOBIN= \
-		     CGO_ENABLED=$(HOST_GO_CGO_ENABLED)
+# The original beep fork was replaced upstream. The Go proxy retains the
+# pinned module, verified against go.sum, for download-time vendoring.
+# IKEMEN_BUILD_CMDS uses HOST_GO_TARGET_ENV to build offline from vendor/.
+IKEMEN_GO_ENV = GOPROXY=https://proxy.golang.org
 
 define IKEMEN_BUILD_CMDS
 	$(HOST_GO_TARGET_ENV) $(MAKE) -C $(@D) -f Makefile Ikemen_GO_Linux
