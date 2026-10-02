@@ -9,6 +9,10 @@ RCLONE_SITE = $(call github,rclone,rclone,$(RCLONE_VERSION))
 RCLONE_LICENSE = GPLv2
 RCLONE_DEPENDENCIES =
 
+# Resolve pinned modules even when upstream vanity URLs or tags disappear.
+# The download step vendors them; the build below keeps GOPROXY=off.
+RCLONE_GO_ENV = GOPROXY=https://proxy.golang.org
+
 define RCLONE_BUILD_CMDS
 	cd $(@D) && $(HOST_GO_TARGET_ENV) $(GO_BIN) build
 endef

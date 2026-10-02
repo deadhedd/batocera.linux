@@ -1,0 +1,2 @@
+# Locally computed after Buildroot Go dependency vendoring.
+sha256  7b2c30d3b6fa75b5cd497ac718553975cb61fc28392838156a4c87853b672049  rclone-v1.72.1-go2.tar.gz
